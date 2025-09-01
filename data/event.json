@@ -1,0 +1,940 @@
+{
+  "event_name": "SISHEN BORGDAG",
+  "sections": [
+    "SEKSIE 1",
+    "SEKSIE 2"
+  ],
+  "rinks": 7,
+  "rounds": 6,
+  "players": {
+    "2": {
+      "name": "Bob",
+      "section": "SEKSIE 1"
+    },
+    "3": {
+      "name": "Chris",
+      "section": "SEKSIE 1"
+    },
+    "4": {
+      "name": "Daniel",
+      "section": "SEKSIE 1"
+    },
+    "5": {
+      "name": "Elsa",
+      "section": "SEKSIE 2"
+    },
+    "6": {
+      "name": "Frans",
+      "section": "SEKSIE 2"
+    },
+    "7": {
+      "name": "Gerrit",
+      "section": "SEKSIE 2"
+    },
+    "8": {
+      "name": "Henk",
+      "section": "SEKSIE 2"
+    },
+    "1": {
+      "name": "Diederik",
+      "section": "SEKSIE 1"
+    }
+  },
+  "pairings": {
+    "SEKSIE 1:1": [
+      {
+        "rink": 1,
+        "a_id": null,
+        "b_id": null
+      },
+      {
+        "rink": 2,
+        "a_id": null,
+        "b_id": null
+      },
+      {
+        "rink": 3,
+        "a_id": 3,
+        "b_id": 1
+      },
+      {
+        "rink": 4,
+        "a_id": 4,
+        "b_id": 2
+      },
+      {
+        "rink": 5,
+        "a_id": null,
+        "b_id": null
+      },
+      {
+        "rink": 6,
+        "a_id": null,
+        "b_id": null
+      },
+      {
+        "rink": 7,
+        "a_id": null,
+        "b_id": null
+      }
+    ],
+    "SEKSIE 2:1": [
+      {
+        "rink": 1,
+        "a_id": null,
+        "b_id": null
+      },
+      {
+        "rink": 2,
+        "a_id": 8,
+        "b_id": 6
+      },
+      {
+        "rink": 3,
+        "a_id": 2,
+        "b_id": 3
+      },
+      {
+        "rink": 4,
+        "a_id": 5,
+        "b_id": 1
+      },
+      {
+        "rink": 5,
+        "a_id": 4,
+        "b_id": 7
+      },
+      {
+        "rink": 6,
+        "a_id": null,
+        "b_id": null
+      },
+      {
+        "rink": 7,
+        "a_id": null,
+        "b_id": null
+      }
+    ]
+  },
+  "scores": {
+    "SEKSIE 1:1:1": {
+      "a": {
+        "vir": 15,
+        "teen": 20
+      },
+      "b": {
+        "vir": 20,
+        "teen": 15
+      }
+    },
+    "SEKSIE 1:1:2": {
+      "a": {
+        "vir": 20,
+        "teen": 15
+      },
+      "b": {
+        "vir": 15,
+        "teen": 20
+      }
+    },
+    "SEKSIE 2:1:2": {
+      "a": {
+        "vir": 0,
+        "teen": 0
+      },
+      "b": {
+        "vir": 0,
+        "teen": 0
+      }
+    },
+    "SEKSIE 2:1:1": {
+      "a": {
+        "vir": 0,
+        "teen": 0
+      },
+      "b": {
+        "vir": 0,
+        "teen": 0
+      }
+    }
+  },
+  "rules": {
+    "POINTS_WIN": 2,
+    "POINTS_DRAW": 1,
+    "POINTS_LOSS": 0,
+    "BONUS_ENABLED": false,
+    "BONUS_THRESHOLD": 10,
+    "BONUS_POINTS": 1,
+    "TIEBREAKERS": [
+      "Punte",
+      "Verskil",
+      "Skips draw to Jack"
+    ],
+    "ENDS_PER_GAME": 18
+  },
+  "ui": {
+    "mirror_mode": true
+  },
+  "locks": {},
+  "audit": [
+    {
+      "ts": 1756149045.3020525,
+      "action": "generate_swiss",
+      "payload": {
+        "section": "SEKSIE 1",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 1,
+            "a_id": 1,
+            "b_id": 2
+          },
+          {
+            "rink": 2,
+            "a_id": 3,
+            "b_id": 4
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756149082.1878302,
+      "action": "save_scores",
+      "payload": {
+        "section": "SEKSIE 1",
+        "round": 1,
+        "rink": 1,
+        "scores": {
+          "a": {
+            "vir": 15,
+            "teen": 20
+          },
+          "b": {
+            "vir": 20,
+            "teen": 15
+          }
+        }
+      }
+    },
+    {
+      "ts": 1756149083.406983,
+      "action": "save_scores",
+      "payload": {
+        "section": "SEKSIE 1",
+        "round": 1,
+        "rink": 2,
+        "scores": {
+          "a": {
+            "vir": 20,
+            "teen": 15
+          },
+          "b": {
+            "vir": 15,
+            "teen": 20
+          }
+        }
+      }
+    },
+    {
+      "ts": 1756149108.4780474,
+      "action": "generate_swiss",
+      "payload": {
+        "section": "SEKSIE 2",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 1,
+            "a_id": 5,
+            "b_id": 6
+          },
+          {
+            "rink": 2,
+            "a_id": 7,
+            "b_id": 8
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756149121.7463644,
+      "action": "save_scores",
+      "payload": {
+        "section": "SEKSIE 2",
+        "round": 1,
+        "rink": 2,
+        "scores": {
+          "a": {
+            "vir": 5,
+            "teen": 5
+          },
+          "b": {
+            "vir": 5,
+            "teen": 5
+          }
+        }
+      }
+    },
+    {
+      "ts": 1756149126.04561,
+      "action": "save_scores",
+      "payload": {
+        "section": "SEKSIE 2",
+        "round": 1,
+        "rink": 1,
+        "scores": {
+          "a": {
+            "vir": 5,
+            "teen": 5
+          },
+          "b": {
+            "vir": 5,
+            "teen": 5
+          }
+        }
+      }
+    },
+    {
+      "ts": 1756670449.118295,
+      "action": "generate_swiss",
+      "payload": {
+        "section": "SEKSIE 1",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 1,
+            "a_id": 1,
+            "b_id": 2
+          },
+          {
+            "rink": 2,
+            "a_id": 3,
+            "b_id": 4
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756670452.384349,
+      "action": "generate_roundrobin",
+      "payload": {
+        "section": "SEKSIE 1",
+        "filled_rounds": 1
+      }
+    },
+    {
+      "ts": 1756673748.158113,
+      "action": "generate_r1_random",
+      "payload": {
+        "section": "SEKSIE 2",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 4,
+            "a_id": 5,
+            "b_id": 6
+          },
+          {
+            "rink": 3,
+            "a_id": 7,
+            "b_id": 8
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756673759.8961875,
+      "action": "generate_strong_vs_strong",
+      "payload": {
+        "section": "SEKSIE 2",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 4,
+            "a_id": 5,
+            "b_id": 6
+          },
+          {
+            "rink": 3,
+            "a_id": 7,
+            "b_id": 8
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756673770.7466054,
+      "action": "generate_finals_mix",
+      "payload": {
+        "section": "SEKSIE 2",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 4,
+            "a_id": 2,
+            "b_id": 4
+          },
+          {
+            "rink": 3,
+            "a_id": 5,
+            "b_id": 6
+          },
+          {
+            "rink": 5,
+            "a_id": 7,
+            "b_id": 8
+          },
+          {
+            "rink": 2,
+            "a_id": 1,
+            "b_id": 3
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756746816.8902605,
+      "action": "remove_player_forced",
+      "payload": {
+        "player_id": 1,
+        "affected_pairings": 2
+      }
+    },
+    {
+      "ts": 1756746849.2049618,
+      "action": "generate_r1_random",
+      "payload": {
+        "section": "SEKSIE 1",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 4,
+            "a_id": 1,
+            "b_id": 2
+          },
+          {
+            "rink": 3,
+            "a_id": 3,
+            "b_id": 4
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756748770.886828,
+      "action": "generate_r1_random",
+      "payload": {
+        "section": "SEKSIE 1",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 4,
+            "a_id": 1,
+            "b_id": 2
+          },
+          {
+            "rink": 3,
+            "a_id": 3,
+            "b_id": 4
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756748783.483684,
+      "action": "generate_r1_random",
+      "payload": {
+        "section": "SEKSIE 1",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 4,
+            "a_id": 1,
+            "b_id": 2
+          },
+          {
+            "rink": 3,
+            "a_id": 3,
+            "b_id": 4
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756748833.263665,
+      "action": "generate_r1_random",
+      "payload": {
+        "section": "SEKSIE 1",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 4,
+            "a_id": 1,
+            "b_id": 2
+          },
+          {
+            "rink": 3,
+            "a_id": 3,
+            "b_id": 4
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756750023.5484629,
+      "action": "save_pairings",
+      "payload": {
+        "section": "SEKSIE 1",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 1,
+            "a_id": null,
+            "b_id": null
+          },
+          {
+            "rink": 2,
+            "a_id": null,
+            "b_id": null
+          },
+          {
+            "rink": 3,
+            "a_id": 1,
+            "b_id": 2
+          },
+          {
+            "rink": 4,
+            "a_id": 3,
+            "b_id": 4
+          },
+          {
+            "rink": 5,
+            "a_id": null,
+            "b_id": null
+          },
+          {
+            "rink": 6,
+            "a_id": null,
+            "b_id": null
+          },
+          {
+            "rink": 7,
+            "a_id": null,
+            "b_id": null
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756750028.0743685,
+      "action": "save_pairings",
+      "payload": {
+        "section": "SEKSIE 2",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 1,
+            "a_id": null,
+            "b_id": null
+          },
+          {
+            "rink": 2,
+            "a_id": null,
+            "b_id": null
+          },
+          {
+            "rink": 3,
+            "a_id": 7,
+            "b_id": 6
+          },
+          {
+            "rink": 4,
+            "a_id": 8,
+            "b_id": 5
+          },
+          {
+            "rink": 5,
+            "a_id": null,
+            "b_id": null
+          },
+          {
+            "rink": 6,
+            "a_id": null,
+            "b_id": null
+          },
+          {
+            "rink": 7,
+            "a_id": null,
+            "b_id": null
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756750076.5370212,
+      "action": "generate_finals_mix",
+      "payload": {
+        "section": "SEKSIE 1",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 4,
+            "a_id": 1,
+            "b_id": 2
+          },
+          {
+            "rink": 3,
+            "a_id": 3,
+            "b_id": 4
+          },
+          {
+            "rink": 5,
+            "a_id": 5,
+            "b_id": 6
+          },
+          {
+            "rink": 2,
+            "a_id": 7,
+            "b_id": 8
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756751909.6038592,
+      "action": "generate_finals_mix",
+      "payload": {
+        "section": "SEKSIE 1",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 4,
+            "a_id": 7,
+            "b_id": 1
+          },
+          {
+            "rink": 3,
+            "a_id": 2,
+            "b_id": 3
+          },
+          {
+            "rink": 5,
+            "a_id": 4,
+            "b_id": 5
+          },
+          {
+            "rink": 2,
+            "a_id": 6,
+            "b_id": 8
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756751926.447009,
+      "action": "generate_finals_mix",
+      "payload": {
+        "section": "SEKSIE 2",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 4,
+            "a_id": 6,
+            "b_id": 1
+          },
+          {
+            "rink": 3,
+            "a_id": 2,
+            "b_id": 3
+          },
+          {
+            "rink": 5,
+            "a_id": 4,
+            "b_id": 5
+          },
+          {
+            "rink": 2,
+            "a_id": 7,
+            "b_id": 8
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756753117.2027514,
+      "action": "generate_r1_random",
+      "payload": {
+        "section": "SEKSIE 1",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 4,
+            "a_id": 1,
+            "b_id": 4
+          },
+          {
+            "rink": 3,
+            "a_id": 3,
+            "b_id": 2
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756753122.5042963,
+      "action": "generate_finals_mix_both",
+      "payload": {
+        "sections": [
+          "SEKSIE 1",
+          "SEKSIE 2"
+        ],
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 4,
+            "a_id": 7,
+            "b_id": 8
+          },
+          {
+            "rink": 3,
+            "a_id": 1,
+            "b_id": 2
+          },
+          {
+            "rink": 5,
+            "a_id": 3,
+            "b_id": 4
+          },
+          {
+            "rink": 2,
+            "a_id": 5,
+            "b_id": 6
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756753126.1160574,
+      "action": "generate_r1_random",
+      "payload": {
+        "section": "SEKSIE 2",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 4,
+            "a_id": 7,
+            "b_id": 8
+          },
+          {
+            "rink": 3,
+            "a_id": 6,
+            "b_id": 5
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756753130.732555,
+      "action": "generate_finals_mix_both",
+      "payload": {
+        "sections": [
+          "SEKSIE 1",
+          "SEKSIE 2"
+        ],
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 4,
+            "a_id": 5,
+            "b_id": 1
+          },
+          {
+            "rink": 3,
+            "a_id": 2,
+            "b_id": 3
+          },
+          {
+            "rink": 5,
+            "a_id": 4,
+            "b_id": 7
+          },
+          {
+            "rink": 2,
+            "a_id": 8,
+            "b_id": 6
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756753143.3577206,
+      "action": "save_pairings",
+      "payload": {
+        "section": "SEKSIE 2",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 1,
+            "a_id": null,
+            "b_id": null
+          },
+          {
+            "rink": 2,
+            "a_id": 8,
+            "b_id": 6
+          },
+          {
+            "rink": 3,
+            "a_id": 2,
+            "b_id": 3
+          },
+          {
+            "rink": 4,
+            "a_id": 5,
+            "b_id": 1
+          },
+          {
+            "rink": 5,
+            "a_id": 4,
+            "b_id": 7
+          },
+          {
+            "rink": 6,
+            "a_id": null,
+            "b_id": null
+          },
+          {
+            "rink": 7,
+            "a_id": null,
+            "b_id": null
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756753144.139037,
+      "action": "save_pairings",
+      "payload": {
+        "section": "SEKSIE 1",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 1,
+            "a_id": null,
+            "b_id": null
+          },
+          {
+            "rink": 2,
+            "a_id": 8,
+            "b_id": 6
+          },
+          {
+            "rink": 3,
+            "a_id": 2,
+            "b_id": 3
+          },
+          {
+            "rink": 4,
+            "a_id": 5,
+            "b_id": 1
+          },
+          {
+            "rink": 5,
+            "a_id": 4,
+            "b_id": 7
+          },
+          {
+            "rink": 6,
+            "a_id": null,
+            "b_id": null
+          },
+          {
+            "rink": 7,
+            "a_id": null,
+            "b_id": null
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756753293.434098,
+      "action": "clear_pairings",
+      "payload": {
+        "section": "SEKSIE 1",
+        "round": 1
+      }
+    },
+    {
+      "ts": 1756755783.0597806,
+      "action": "clear_per_end_rows",
+      "payload": {
+        "key": "SEKSIE 1:1:1"
+      }
+    },
+    {
+      "ts": 1756755800.2087388,
+      "action": "generate_r1_random",
+      "payload": {
+        "section": "SEKSIE 1",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 4,
+            "a_id": 4,
+            "b_id": 2
+          },
+          {
+            "rink": 3,
+            "a_id": 3,
+            "b_id": 1
+          }
+        ]
+      }
+    },
+    {
+      "ts": 1756755802.9941194,
+      "action": "save_pairings",
+      "payload": {
+        "section": "SEKSIE 1",
+        "round": 1,
+        "pairs": [
+          {
+            "rink": 1,
+            "a_id": null,
+            "b_id": null
+          },
+          {
+            "rink": 2,
+            "a_id": null,
+            "b_id": null
+          },
+          {
+            "rink": 3,
+            "a_id": 3,
+            "b_id": 1
+          },
+          {
+            "rink": 4,
+            "a_id": 4,
+            "b_id": 2
+          },
+          {
+            "rink": 5,
+            "a_id": null,
+            "b_id": null
+          },
+          {
+            "rink": 6,
+            "a_id": null,
+            "b_id": null
+          },
+          {
+            "rink": 7,
+            "a_id": null,
+            "b_id": null
+          }
+        ]
+      }
+    }
+  ],
+  "scores_per_end": {}
+}
