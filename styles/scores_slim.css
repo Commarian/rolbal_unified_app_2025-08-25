@@ -1,0 +1,86 @@
+/* Compact Scores UI: keep things readable but tighter */
+/* Apply only when you inject this on the Scores tab */
+
+/* Base rhythm */
+:root {
+  --scores-font: 13.5px;
+  --scores-line: 1.25;
+  --scores-gap: 6px;
+  --scores-pad: 4px 6px;
+  --scores-radius: 6px;
+}
+
+/* Headings and text near scores */
+[data-testid="stMarkdownContainer"] h1,
+[data-testid="stMarkdownContainer"] h2,
+[data-testid="stMarkdownContainer"] h3 {
+  margin: 4px 0 8px !important;
+  line-height: 1.2 !important;
+}
+
+[data-testid="stMarkdownContainer"] p,
+label {
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+  margin: 0 0 4px !important;
+}
+
+/* Inputs */
+input[type="text"],
+input[type="number"],
+textarea,
+select {
+  height: 28px !important;
+  padding: var(--scores-pad) !important;
+  font-size: var(--scores-font) !important;
+  line-height: var(--scores-line) !important;
+  border-radius: var(--scores-radius) !important;
+}
+
+/* Streamlit specific selectors */
+.stSelectbox [data-baseweb="select"] > div {
+  min-height: 28px !important;
+}
+
+.stSelectbox [role="combobox"] {
+  min-height: 28px !important;
+  padding: 0 6px !important;
+  font-size: var(--scores-font) !important;
+}
+
+.stNumberInput input,
+.stTextInput input {
+  height: 28px !important;
+}
+
+/* Buttons */
+.stButton > button {
+  height: 28px !important;
+  padding: 2px 10px !important;
+  font-size: 12px !important;
+  border-radius: var(--scores-radius) !important;
+  margin: 0 !important;
+}
+
+/* Layout gaps */
+[data-testid="stHorizontalBlock"],
+.stColumns {
+  gap: var(--scores-gap) !important;
+}
+
+/* Messages and grouped widgets */
+.stAlert,
+.stRadio,
+.stSelectbox,
+.stNumberInput,
+.stTextInput {
+  margin-bottom: var(--scores-gap) !important;
+}
+
+/* Table-like rows */
+.scores-row { padding: 4px 6px !important; }
+.scores-header { padding: 2px 6px !important; font-size: 12px !important; }
+
+/* Keep leaderboard/standings readable if same page shares CSS */
+.stDataFrame, .stTable table { font-size: 13px !important; }
+

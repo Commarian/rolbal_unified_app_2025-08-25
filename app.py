@@ -78,6 +78,68 @@ def render_rink_score(section: str, round_no: int, rink: int, pr: dict, store, m
             st.success(f"Saved Rink {rink}")
 
 
+def render_rink_score_compact(section: str, round_no: int, rink: int, pr: dict, store, mirror_on: bool):
+    """New compact row renderer using Streamlit columns only.
+
+    Merges separate A/B name columns into a single compact "Teams" column
+    to reduce visual noise.
+    """
+    a_id = pr.get("a_id"); b_id = pr.get("b_id")
+    a = store.state["players"].get(str(a_id), {}) if a_id else {}
+    b = store.state["players"].get(str(b_id), {}) if b_id else {}
+    a_name = a.get("name", ""); b_name = b.get("name", "")
+
+    sk = store.key_score(section, int(round_no), int(rink))
+    sc = store.state.get("scores", {}).get(sk, {"a": {"vir": 0, "teen": 0}, "b": {"vir": 0, "teen": 0}})
+
+    key_va = f"score_va_{section}_{round_no}_{rink}"
+    key_ta = f"score_ta_{section}_{round_no}_{rink}"
+    key_vb = f"score_vb_{section}_{round_no}_{rink}"
+    key_tb = f"score_tb_{section}_{round_no}_{rink}"
+
+    sec_color = SECTION_COLORS.get(section, "#a78bfa")
+    # Rink | Teams | A Vir | A Teen | B Vir | B Teen | Save
+    c_rk, c_team, c_av, c_at, c_bv, c_bt, c_btn = st.columns([0.7, 2.8, 0.8, 0.8, 0.8, 0.8, 0.8])
+
+    with c_rk:
+        st.markdown(f'<span class="rink-chip" style="color:{sec_color};border-color:{sec_color}44">{rink}</span>', unsafe_allow_html=True)
+    with c_team:
+        a_txt = f"#{a_id or '—'} {a_name or ''}".strip()
+        b_txt = f"#{b_id or '—'} {b_name or ''}".strip()
+        st.markdown(
+            f"<span class='ab-chip'>A</span><span class='score-name'>{a_txt}</span>"
+            f" <span class='vs'>vs</span> "
+            f"<span class='ab-chip'>B</span><span class='score-name'>{b_txt}</span>",
+            unsafe_allow_html=True,
+        )
+
+    with c_av:
+        va = st.number_input("A Vir", min_value=0, value=int(sc["a"]["vir"]), step=1, key=key_va, label_visibility="collapsed")
+    with c_at:
+        ta = st.number_input("A Teen", min_value=0, value=int(sc["a"]["teen"]), step=1, key=key_ta, label_visibility="collapsed")
+
+    if mirror_on:
+        vb, tb = ta, va
+        with c_bv:
+            st.caption(str(vb))
+        with c_bt:
+            st.caption(str(tb))
+    else:
+        with c_bv:
+            vb = st.number_input("B Vir", min_value=0, value=int(sc["b"]["vir"]), step=1, key=key_vb, label_visibility="collapsed")
+        with c_bt:
+            tb = st.number_input("B Teen", min_value=0, value=int(sc["b"]["teen"]), step=1, key=key_tb, label_visibility="collapsed")
+
+    with c_btn:
+        if st.button(f"Save", key=f"save_rink_{section}_{round_no}_{rink}"):
+            store.state.setdefault("scores", {})[sk] = {
+                "a": {"vir": int(va), "teen": int(ta)},
+                "b": {"vir": int(vb), "teen": int(tb)},
+            }
+            store.save()
+            st.success(f"Saved Rink {rink}")
+
+
 def _section_player_options(store, section):
     """
     Returns a list like [(None, "—"), (1, "1 — Alice"), (2, "2 — Bob"), ...]
@@ -111,6 +173,19 @@ ENTER_SCORES_CSS = """
 """
 
 st.markdown(ENTER_SCORES_CSS, unsafe_allow_html=True)
+ENTER_SCORES_CSS_COMPACT = """
+<style>
+/* Slimmer controls specifically for Scores tab (overrides) */
+.stNumberInput>div>div>input { height:26px; padding:0 6px; }
+.stSelectbox [data-baseweb="select"] > div { min-height:26px; }
+.stButton>button { height:26px; padding:2px 8px; font-size:12px; }
+.rink-chip { font-weight:700; font-size:.85rem; padding:2px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.18); display:inline-block; min-width:36px; text-align:center; }
+.score-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ab-chip { font-weight:700; font-size:10px; padding:1px 6px; border-radius:999px; border:1px solid rgba(255,255,255,.18); opacity:.8; margin-right:6px; }
+.vs { opacity:.6; margin:0 6px; }
+</style>
+"""
+st.markdown(ENTER_SCORES_CSS_COMPACT, unsafe_allow_html=True)
 DATA_PATH = "data/event.json"
 store = Store(DATA_PATH)
 
@@ -648,20 +723,19 @@ with tab_scores:
         st.warning("No pairings for this round.")
     else:
         st.caption("Tip: Mirror mode shows B as a live readout of A (toggle in the sidebar).")
-        # Header row
-        st.markdown(
-            """
-            <div class="score-hdr">
-              <div>Rink</div><div>A</div><div>B</div>
-              <div>A Vir</div><div>A Teen</div><div>B Vir</div><div>B Teen</div><div>Save</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        # Header row (columns aligned with data rows)
+        h_rk, h_team, h_av, h_at, h_bv, h_bt, h_btn = st.columns([0.7, 2.8, 0.8, 0.8, 0.8, 0.8, 0.8])
+        h_rk.markdown("**Rink**")
+        h_team.markdown("**Teams**")
+        h_av.markdown("**A Vir**")
+        h_at.markdown("**A Teen**")
+        h_bv.markdown("**B Vir**")
+        h_bt.markdown("**B Teen**")
+        h_btn.markdown("**Save**")
 
         # Rows
         for pr in pairings:
-            render_rink_score(
+            render_rink_score_compact(
                 section=sec, round_no=int(rnd), rink=int(pr.get("rink", 0)),
                 pr=pr, store=store, mirror_on=mirror_on
             )
