@@ -1,0 +1,35 @@
+            with c1:
+                st.markdown(
+                    f'<div class="rink-row"><span class="rink-pill" style="border-color:{sec_color}; color:{sec_color}">{idx}</span></div>',
+                    unsafe_allow_html=True
+                )
+
+            opts_a = _filter_opts(base_opts, cur_a_id, used_ids)
+            a_idx = _index_in(opts_a, cur_a_id)
+            with c2:
+                a_choice = st.selectbox(
+                    f"A_{sec}_{idx}", options=opts_a, index=a_idx,
+                    key=f"{k_prefix}_a_{idx}", format_func=lambda x: x[1],
+                    label_visibility="collapsed"
+                )
+            sel_a = a_choice[0]
+            if sel_a is not None:
+                used_ids.add(sel_a)
+
+            opts_b = _filter_opts(base_opts, cur_b_id, used_ids)
+            b_idx = _index_in(opts_b, cur_b_id)
+            with c3:
+                b_choice = st.selectbox(
+                    f"B_{sec}_{idx}", options=opts_b, index=b_idx,
+                    key=f"{k_prefix}_b_{idx}", format_func=lambda x: x[1],
+                    label_visibility="collapsed"
+                )
+            sel_b = b_choice[0]
+
+            new_pairs.append({"rink": idx, "a_id": sel_a, "b_id": sel_b})
+
+        # Duplicate validation
+        seen = {}
+        for pr in new_pairs:
+            for side in ("a_id", "b_id"):
+                pid = pr.get(side)

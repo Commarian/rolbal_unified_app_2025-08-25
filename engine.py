@@ -175,8 +175,12 @@ def compute_standings(state: Dict, section: str, rules: Dict, tiebreakers: List[
                 if not sc:
                     continue
 
-                va = int(sc["a"].get("vir", 0)); ta = int(sc["a"].get("teen", 0))
-                vb = int(sc["b"].get("vir", 0)); tb = int(sc["b"].get("teen", 0))
+                va = int(sc.get("a", {}).get("vir", 0)); ta = int(sc.get("a", {}).get("teen", 0))
+                vb = int(sc.get("b", {}).get("vir", 0)); tb = int(sc.get("b", {}).get("teen", 0))
+
+                # Treat a 0-0 placeholder as "not played yet" (don't credit a draw)
+                if va == 0 and ta == 0 and vb == 0 and tb == 0:
+                    continue
 
                 # credit ONLY players who belong to the target `section`
                 if a_id in section_players and a_id in rows:

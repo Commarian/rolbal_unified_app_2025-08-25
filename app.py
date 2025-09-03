@@ -1,5 +1,6 @@
 # app.py
 import streamlit as st
+import streamlit.components.v1 as components
 from storage import Store
 from engine import (
     PlayerStanding, compute_standings, round_result,
@@ -98,7 +99,7 @@ def render_rink_score_compact(section: str, round_no: int, rink: int, pr: dict, 
     key_tb = f"score_tb_{section}_{round_no}_{rink}"
 
     sec_color = SECTION_COLORS.get(section, "#a78bfa")
-    # Rink | Teams | A Vir | A Teen | B Vir | B Teen | Save
+    # Rink | Teams | A | A | B | B | Save (headers below clarify Vir/Teen)
     c_rk, c_team, c_av, c_at, c_bv, c_bt, c_btn = st.columns([0.7, 2.8, 0.8, 0.8, 0.8, 0.8, 0.8])
 
     with c_rk:
@@ -113,22 +114,68 @@ def render_rink_score_compact(section: str, round_no: int, rink: int, pr: dict, 
             unsafe_allow_html=True,
         )
 
+    # Show the A player's name above inputs for clarity
     with c_av:
-        va = st.number_input("A Vir", min_value=0, value=int(sc["a"]["vir"]), step=1, key=key_va, label_visibility="collapsed")
+        if a_name:
+            st.caption(f"{a_name}")
+        va = st.number_input(
+            "A Vir",
+            min_value=0,
+            value=int(sc["a"]["vir"]),
+            step=1,
+            key=key_va,
+            label_visibility="collapsed",
+            help=f"Vir = points for {a_name or 'A'}"
+        )
     with c_at:
-        ta = st.number_input("A Teen", min_value=0, value=int(sc["a"]["teen"]), step=1, key=key_ta, label_visibility="collapsed")
+        if a_name:
+            st.caption(f"{a_name}")
+        ta = st.number_input(
+            "A Teen",
+            min_value=0,
+            value=int(sc["a"]["teen"]),
+            step=1,
+            key=key_ta,
+            label_visibility="collapsed",
+            help=f"Teen = points against {a_name or 'A'}"
+        )
 
     if mirror_on:
+        # Mirror B from A, but still label with the B player's name
         vb, tb = ta, va
         with c_bv:
-            st.caption(str(vb))
+            if b_name:
+                st.caption(f"{b_name}")
+            st.markdown(f"<div class='readout vir'>{vb}</div>", unsafe_allow_html=True)
         with c_bt:
-            st.caption(str(tb))
+            if b_name:
+                st.caption(f"{b_name}")
+            st.markdown(f"<div class='readout teen'>{tb}</div>", unsafe_allow_html=True)
     else:
         with c_bv:
-            vb = st.number_input("B Vir", min_value=0, value=int(sc["b"]["vir"]), step=1, key=key_vb, label_visibility="collapsed")
+            if b_name:
+                st.caption(f"{b_name}")
+            vb = st.number_input(
+                "B Vir",
+                min_value=0,
+                value=int(sc["b"]["vir"]),
+                step=1,
+                key=key_vb,
+                label_visibility="collapsed",
+                help=f"Vir = points for {b_name or 'B'}"
+            )
         with c_bt:
-            tb = st.number_input("B Teen", min_value=0, value=int(sc["b"]["teen"]), step=1, key=key_tb, label_visibility="collapsed")
+            if b_name:
+                st.caption(f"{b_name}")
+            tb = st.number_input(
+                "B Teen",
+                min_value=0,
+                value=int(sc["b"]["teen"]),
+                step=1,
+                key=key_tb,
+                label_visibility="collapsed",
+                help=f"Teen = points against {b_name or 'B'}"
+            )
 
     with c_btn:
         if st.button(f"Save", key=f"save_rink_{section}_{round_no}_{rink}"):
@@ -183,6 +230,33 @@ ENTER_SCORES_CSS_COMPACT = """
 .score-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ab-chip { font-weight:700; font-size:10px; padding:1px 6px; border-radius:999px; border:1px solid rgba(255,255,255,.18); opacity:.8; margin-right:6px; }
 .vs { opacity:.6; margin:0 6px; }
+
+/* Vir/Teen tinting */
+:root {
+  --vir-fg: #22c55e;
+  --vir-bg: rgba(34,197,94,.14);
+  --teen-fg: #f59e0b;
+  --teen-bg: rgba(245,158,11,.14);
+  --scores-radius: 6px;
+}
+.col.vir { color: var(--vir-fg); font-weight:700; }
+.col.teen { color: var(--teen-fg); font-weight:700; }
+
+.stNumberInput input[aria-label="A Vir"],
+.stNumberInput input[aria-label="B Vir"] {
+  background: var(--vir-bg) !important;
+  border-color: rgba(34,197,94,.35) !important;
+}
+.stNumberInput input[aria-label="A Teen"],
+.stNumberInput input[aria-label="B Teen"] {
+  background: var(--teen-bg) !important;
+  border-color: rgba(245,158,11,.35) !important;
+}
+
+/* Tint the mirror readouts too */
+.readout { padding:6px 10px; border-radius: var(--scores-radius); display:flex; align-items:center; min-height:26px; }
+.readout.vir { background: var(--vir-bg); color: var(--vir-fg); }
+.readout.teen { background: var(--teen-bg); color: var(--teen-fg); }
 </style>
 """
 st.markdown(ENTER_SCORES_CSS_COMPACT, unsafe_allow_html=True)
@@ -241,6 +315,21 @@ if st.sidebar.button("Save settings", key="sb_save"):
 
 st.title(f"{event_name} — Unified App")
 
+# Global on-leave warning if there are unsaved pairings changes
+components.html(
+    f"""
+    <script>
+    (function(){{
+      var dirty = {str(bool(st.session_state.get('pairings_dirty_any', False))).lower()};
+      var handler = function(e){{ if(!dirty) return; e.preventDefault(); e.returnValue=''; return ''; }};
+      try {{ window.top.onbeforeunload = handler; }} catch(err) {{}}
+      window.onbeforeunload = handler;
+    }})();
+    </script>
+    """,
+    height=0,
+)
+
 tab_rules, tab_players, tab_schedule, tab_scores, tab_perend, tab_standings, tab_lb, tab_io, tab_tools = st.tabs([
     "Rules", "Players", "Schedule", "Enter Scores", "Per-end", "Standings", "Leaderboard", "Import/Export", "Tools"
 ])
@@ -248,6 +337,8 @@ tab_rules, tab_players, tab_schedule, tab_scores, tab_perend, tab_standings, tab
 # -------- Rules --------
 with tab_rules:
     st.subheader("Scoring Rules & Tiebreakers")
+    if st.session_state.get("pairings_dirty_any"):
+        st.warning("Unsaved pairings detected in Schedule. Save or clear them before leaving.")
     rules = store.state.get("rules", {})
     c1,c2,c3 = st.columns(3)
     with c1:
@@ -285,6 +376,8 @@ with tab_rules:
 # -------- Players --------
 with tab_players:
     st.subheader("Players")
+    if st.session_state.get("pairings_dirty_any"):
+        st.warning("Unsaved pairings detected in Schedule. Save or clear them before leaving.")
 
     # Color legend (matches Schedule/other tabs)
     legend_html = '<div class="section-legend">'
@@ -675,6 +768,12 @@ with tab_schedule:
             names = [f'#{pid} — {store.state["players"].get(str(pid), {}).get("name", "")}' for pid in dup_ids]
             st.error("Duplicate players selected in this round: " + ", ".join(names))
 
+        # Track unsaved changes (compare UI selections to saved pairings)
+        existing_pairs_saved = store.state["pairings"].get(key_pair, [])
+        def _canon(rows):
+            return [{"rink": int(p.get("rink", 0)), "a_id": p.get("a_id"), "b_id": p.get("b_id")} for p in (rows or [])]
+        st.session_state.setdefault("pairings_dirty", {})[key_pair] = (_canon(new_pairs) != _canon(existing_pairs_saved))
+
         # Wipe guard: if all empty and there are existing pairings, require explicit clear
         existing_pairs = store.state["pairings"].get(key_pair, [])
         all_empty = not any(p.get("a_id") or p.get("b_id") for p in new_pairs)
@@ -690,6 +789,7 @@ with tab_schedule:
                     store.state["pairings"][key_pair] = new_pairs if not all_empty else []
                     store.log("save_pairings", {"section": sec, "round": int(rnd), "pairs": store.state["pairings"][key_pair]})
                     store.save()
+                    st.session_state.setdefault("pairings_dirty", {})[key_pair] = False
                     st.success(f"{sec}: Pairings saved.")
 
         with btn_cols[1]:
@@ -700,6 +800,7 @@ with tab_schedule:
                 for i in range(1, rinksN + 1):
                     st.session_state.pop(f"{k_prefix}_a_{i}", None)
                     st.session_state.pop(f"{k_prefix}_b_{i}", None)
+                st.session_state.setdefault("pairings_dirty", {})[key_pair] = False
                 st.success(f"{sec}: All pairings cleared for this round.")
 
         st.markdown("</div>", unsafe_allow_html=True)  # close section box
@@ -708,13 +809,28 @@ with tab_schedule:
     for sec in all_sections:
         render_section_pairings(sec)
 
+    # Aggregate dirty flag across sections for this round
+    _pd = st.session_state.get("pairings_dirty", {})
+    st.session_state["pairings_dirty_any"] = any(bool(v) for v in _pd.values())
+
 
 # -------- Scores --------
 # -------- Scores --------
 with tab_scores:
     st.subheader("Enter Scores")
+    if st.session_state.get("pairings_dirty_any"):
+        st.warning("Unsaved pairings detected in Schedule. Save or clear them to avoid losing changes.")
     sec = st.selectbox("Section", options=sections or DEFAULT_SECTIONS, key="scor_sec")
     rnd = st.number_input("Round", 1, int(store.state.get("rounds", rounds)), 1, key="scor_round")
+    # Clear banner to make it obvious which section/round you are editing
+    _sec_color = SECTION_COLORS.get(sec, "#a78bfa")
+    st.markdown(
+        f"<div class='section-banner'>"
+        f"<span class='section-dot' style='background:{_sec_color}'></span>"
+        f"<span class='section-title'>Capturing scores for <b>{sec}</b> — Round <b>{int(rnd)}</b></span>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
     key_pair = store.key_pair(sec, int(rnd))
     pairings = store.state["pairings"].get(key_pair, [])
     mirror_on = store.state.get("ui", {}).get("mirror_mode", True)
@@ -723,14 +839,16 @@ with tab_scores:
         st.warning("No pairings for this round.")
     else:
         st.caption("Tip: Mirror mode shows B as a live readout of A (toggle in the sidebar).")
+        st.caption("Legend: Vir = for the player • Teen = against the same player")
         # Header row (columns aligned with data rows)
         h_rk, h_team, h_av, h_at, h_bv, h_bt, h_btn = st.columns([0.7, 2.8, 0.8, 0.8, 0.8, 0.8, 0.8])
         h_rk.markdown("**Rink**")
         h_team.markdown("**Teams**")
-        h_av.markdown("**A Vir**")
-        h_at.markdown("**A Teen**")
-        h_bv.markdown("**B Vir**")
-        h_bt.markdown("**B Teen**")
+        # Column headers keep it compact; row inputs show player names
+        h_av.markdown("<span class='col vir'>Vir</span>", unsafe_allow_html=True)
+        h_at.markdown("<span class='col teen'>Teen</span>", unsafe_allow_html=True)
+        h_bv.markdown("<span class='col vir'>Vir</span>", unsafe_allow_html=True)
+        h_bt.markdown("<span class='col teen'>Teen</span>", unsafe_allow_html=True)
         h_btn.markdown("**Save**")
 
         # Rows
@@ -762,6 +880,8 @@ with tab_scores:
 # -------- Per-end --------
 with tab_perend:
     st.subheader("Per-end (optional)")
+    if st.session_state.get("pairings_dirty_any"):
+        st.warning("Unsaved pairings detected in Schedule. Save or clear them before leaving.")
 
     sections_cfg = store.state.get("sections", DEFAULT_SECTIONS) or DEFAULT_SECTIONS
     sec = st.selectbox("Section", options=sections_cfg, key="pe_sec")
@@ -847,6 +967,8 @@ with tab_perend:
 # -------- Standings --------
 with tab_standings:
     st.subheader("Standings")
+    if st.session_state.get("pairings_dirty_any"):
+        st.warning("Unsaved pairings detected in Schedule. Save or clear them before leaving.")
     rules = store.state.get("rules", {})
     tiebreakers = rules.get("TIEBREAKERS", ["Total","Verskil","Player#"])
     cols = st.columns(3)
@@ -867,6 +989,20 @@ with tab_standings:
 # -------- Leaderboard --------
 with tab_lb:
     st.subheader("Live Leaderboard")
+    if st.session_state.get("pairings_dirty_any"):
+        st.warning("Unsaved pairings detected in Schedule. Save or clear them before leaving.")
+    # Expand the dataframe to fill available viewport height
+    st.markdown(
+        """
+        <style>
+        #lb-wrap [data-testid="stDataFrame"] { height: calc(100vh - 260px) !important; }
+        #lb-wrap [data-testid="stDataFrame"] div[role="grid"] { min-height: calc(100vh - 260px) !important; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown("<div id='lb-wrap'>", unsafe_allow_html=True)
+
     sec_view = st.selectbox("View", options=["Combined"] + (sections or DEFAULT_SECTIONS), key="lb_view")
     interval = st.number_input("Auto-refresh (seconds)", 5, 120, 15, key="lb_int")
     st.caption("This will refresh when you reload; Streamlit Cloud/Local can auto-refresh on timer with external tools.")
@@ -884,9 +1020,13 @@ with tab_lb:
         rows = compute_standings(store.state, sec_view, rules, tiebreakers)
         st.dataframe([{"Posisie": i+1, "#": r.player_id, "Speler": r.name, "Total": r.punte + r.bonus, "Punte": r.punte, "Bonus": r.bonus, "Verskil": r.verskil} for i,r in enumerate(rows)], use_container_width=True, hide_index=True)
 
+    st.markdown("</div>", unsafe_allow_html=True)
+
 # -------- Import / Export --------
 with tab_io:
     st.subheader("Import / Export")
+    if st.session_state.get("pairings_dirty_any"):
+        st.warning("Unsaved pairings detected in Schedule. Save or clear them before leaving.")
 
     # ---- Import players ----
     up = st.file_uploader(
@@ -1034,6 +1174,8 @@ with tab_io:
 # -------- Tools --------
 with tab_tools:
     st.subheader("Tools")
+    if st.session_state.get("pairings_dirty_any"):
+        st.warning("Unsaved pairings detected in Schedule. Save or clear them before leaving.")
     sec = st.selectbox("Section", options=sections or DEFAULT_SECTIONS, key="tl_sec")
     rnd = st.number_input("Round", 1, int(store.state.get("rounds", rounds)), 1, key="tl_round")
     key_pair = store.key_pair(sec, int(rnd))
