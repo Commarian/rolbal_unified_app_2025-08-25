@@ -36,22 +36,34 @@ Run as usual. The app will show a Sign In screen. If Supabase is not configured,
 When Supabase Auth is configured, the app stores all state online in your Supabase Postgres DB (per-user row). Create the table and policies in the SQL editor:
 
 ```
+-- Base table (single event per user works too)
 create table if not exists public.events (
-  user_id uuid primary key,
+  user_id uuid not null,
+  event_id uuid,
+  name text default 'My Event' not null,
   state jsonb not null default '{}'::jsonb,
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  primary key (user_id, event_id)
 );
 
-alter table public.events enable row level security;
+-- If migrating from the earlier single-row schema:
+--   alter table public.events add column if not exists event_id uuid;
+--   alter table public.events add column if not exists name text default 'My Event' not null;
+--   update public.events set event_id = gen_random_uuid() where event_id is null;
+--   drop index if exists events_pkey; -- if it exists as a standalone index
+--   alter table public.events drop constraint if exists events_pkey;
+--   alter table public.events add primary key (user_id, event_id);
 
-create policy "read own" on public.events
-  for select using (auth.uid() = user_id);
-create policy "insert own" on public.events
-  for insert with check (auth.uid() = user_id);
-create policy "update own" on public.events
-  for update using (auth.uid() = user_id);
+alter table public.events enable row level security;
+create policy "read own" on public.events for select using (auth.uid() = user_id);
+create policy "insert own" on public.events for insert with check (auth.uid() = user_id);
+create policy "update own" on public.events for update using (auth.uid() = user_id);
 ```
 
 No service key is needed; the app uses the anon key with the signed-in user session so RLS restricts access.
+
+## Multi‑Event + Sync
+- After sign-in, pick an event from the sidebar. Create, rename, duplicate, or delete events. Each event is a row in `public.events` keyed by `(user_id, event_id)`.
+- Toggle “Auto-refresh every 5s” in the sidebar or use Tools → Reload to pull updates made from another device.
 
 This app combines the separate mini-apps into one UI while keeping the data format compatible.

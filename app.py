@@ -12,6 +12,7 @@ from config import EVENT_NAME, DEFAULT_RINKS, DEFAULT_ROUNDS, DEFAULT_SECTIONS
 import os
 import auth_supabase as auth
 import csv, io, datetime as dt, random, re
+import json, hashlib, time
 import pandas as pd
 try:
     import openpyxl  # needed by pandas for .xlsx/.xlsm
@@ -392,11 +393,81 @@ def _render_auth_gate():
 
 _render_auth_gate()
 
-# Compute data path per user to avoid clashes when auth is enabled
+# Compute data path / event selection when auth is enabled
 _user = st.session_state.get("auth_user") if SUPABASE_CONFIGURED else None
+_event_id = None
 if SUPABASE_CONFIGURED and _user and _user.get("id"):
-    # Use online storage (Supabase DB). Local path unused.
-    store = SupabaseStore(_user["id"])
+    # Multi-event selection UI (before opening the store)
+    with st.sidebar:
+        st.markdown("### Event")
+        events = SupabaseStore.list_events_for(_user["id"]) or []
+        # Resolve current selection
+        if "current_event_id" not in st.session_state:
+            st.session_state["current_event_id"] = (events[0]["event_id"] if events else None)
+        names = [(e.get("event_id"), e.get("name") or "Event") for e in events]
+        # Build label map and options
+        labels = {eid or "default": name for eid, name in names}
+        opts = [eid or "default" for eid, _ in names]
+        if not opts:
+            opts = ["default"]
+            labels["default"] = "Default Event"
+        sel_key = st.selectbox("Select event", options=opts, format_func=lambda k: labels.get(k, str(k)), index=max(0, opts.index(st.session_state.get("current_event_id") or "default")) if opts else 0, key="sb_event_select")
+        _event_id = None if sel_key == "default" else sel_key
+
+        c1, c2 = st.columns([1,1])
+        with c1:
+            new_name = st.text_input("New name", key="sb_ev_newname")
+            if st.button("Create", key="sb_ev_create") and new_name.strip():
+                try:
+                    new_id = SupabaseStore.create_event(_user["id"], new_name.strip())
+                    st.session_state["current_event_id"] = new_id
+                    st.success("Event created")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Could not create: {e}")
+        with c2:
+            rename = st.text_input("Rename", key="sb_ev_rename")
+            if st.button("Apply rename", key="sb_ev_rename_btn") and rename.strip() and _event_id:
+                try:
+                    SupabaseStore.rename_event(_user["id"], _event_id, rename.strip())
+                    st.success("Renamed")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Could not rename: {e}")
+
+        c3, c4 = st.columns([1,1])
+        with c3:
+            dup_name = st.text_input("Duplicate as", key="sb_ev_dupname")
+            if st.button("Duplicate", key="sb_ev_dup") and dup_name.strip():
+                try:
+                    src = _event_id  # may be None (legacy)
+                    new_id = SupabaseStore.duplicate_event(_user["id"], src, dup_name.strip())
+                    st.session_state["current_event_id"] = new_id
+                    st.success("Duplicated")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Could not duplicate: {e}")
+        with c4:
+            if st.button("Delete", key="sb_ev_del", type="secondary") and _event_id:
+                try:
+                    SupabaseStore.delete_event(_user["id"], _event_id)
+                    st.session_state["current_event_id"] = None
+                    st.success("Deleted")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Could not delete: {e}")
+
+        st.markdown("---")
+        auto = st.checkbox("Auto-refresh every 5s", value=False, key="sb_auto")
+        if auto:
+            components.html("""
+                <script>
+                setTimeout(function(){ try { window.location.reload(); } catch(e){} }, 5000);
+                </script>
+            """, height=0)
+
+    # Initialize cloud store for the selected event
+    store = SupabaseStore(_user["id"], _event_id)
 else:
     DATA_PATH = "data/event.json"
     store = Store(DATA_PATH)
@@ -415,6 +486,24 @@ if want_debug:
     with st.sidebar:
         st.caption("Auth diagnostics (safe):")
         st.write({k: v for k, v in diag.items()})
+
+# Background autosave: if state changed, persist to cloud/local every ~8s
+def _autosave(store_obj, throttle_sec: int = 8):
+    try:
+        snapshot = json.dumps(store_obj.state, sort_keys=True, ensure_ascii=False)
+        h = hashlib.sha1(snapshot.encode("utf-8")).hexdigest()
+        last_h = st.session_state.get("_autosave_hash")
+        last_t = float(st.session_state.get("_autosave_ts", 0.0))
+        now = time.time()
+        if h != last_h and (now - last_t) > throttle_sec:
+            store_obj.save()
+            st.session_state["_autosave_hash"] = h
+            st.session_state["_autosave_ts"] = now
+    except Exception:
+        # autosave is best-effort; never crash UI
+        pass
+
+_autosave(store)
 
 # ---- Styles for Schedule tab ----
 SECTION_COLORS = {
@@ -496,6 +585,44 @@ components.html(
     """,
     height=0,
 )
+
+STATUS_CSS = """
+<style>
+.status-chip { display:inline-flex; align-items:center; gap:8px; padding:4px 10px; border-radius:999px; font-weight:700; font-size:12px; border:1px solid rgba(255,255,255,.18); }
+.ok { color:#22c55e; border-color: rgba(34,197,94,.35); }
+.warn { color:#f59e0b; border-color: rgba(245,158,11,.35); }
+.err { color:#ef4444; border-color: rgba(239,68,68,.35); }
+</style>
+"""
+st.markdown(STATUS_CSS, unsafe_allow_html=True)
+
+def _render_saved_status():
+    try:
+        snap = json.dumps(store.state, sort_keys=True, ensure_ascii=False)
+        cur_h = hashlib.sha1(snap.encode("utf-8")).hexdigest()
+    except Exception:
+        cur_h = None
+    last_h = st.session_state.get("last_saved_hash")
+    last_ts = st.session_state.get("last_saved_ts")
+    saved = (cur_h is not None and last_h == cur_h)
+    if st.session_state.get("pairings_dirty_any"):
+        saved = False
+    cls = "ok" if saved else "err"
+    label = "Saved" if saved else "Unsaved"
+    when = None
+    if last_ts:
+        try:
+            when = dt.datetime.fromtimestamp(float(last_ts)).strftime("%H:%M:%S")
+        except Exception:
+            when = None
+    txt = f"<span class='status-chip {cls}'>{label}{' · '+when if when else ''}</span>"
+    st.markdown(txt, unsafe_allow_html=True)
+
+hdr_l, hdr_r = st.columns([0.75, 0.25])
+with hdr_l:
+    st.title(f"{event_name} · Unified App")
+with hdr_r:
+    _render_saved_status()
 
 tab_rules, tab_players, tab_schedule, tab_scores, tab_perend, tab_standings, tab_lb, tab_io, tab_tools = st.tabs([
     "Rules", "Players", "Schedule", "Enter Scores", "Per-end", "Standings", "Leaderboard", "Import/Export", "Tools"
@@ -1341,6 +1468,26 @@ with tab_io:
 # -------- Tools --------
 with tab_tools:
     st.subheader("Tools")
+    # Cloud/DB section
+    if SUPABASE_CONFIGURED and _user and _user.get("id"):
+        st.markdown("### Cloud / Database")
+        c1, c2, c3 = st.columns(3)
+        if c1.button("Reload from cloud", key="db_reload"):
+            try:
+                store.load()
+                st.success("Reloaded latest state from Supabase")
+            except Exception as e:
+                st.error(f"Could not reload: {e}")
+        if c2.button("Save to cloud", key="db_save"):
+            try:
+                store.save()
+                st.success("Saved current state to Supabase")
+            except Exception as e:
+                st.error(f"Could not save: {e}")
+        with c3:
+            import json
+            backup = json.dumps(store.state, ensure_ascii=False, indent=2).encode("utf-8")
+            st.download_button("Download JSON backup", data=backup, file_name="rolbal_backup.json", mime="application/json", key="db_backup")
     if st.session_state.get("pairings_dirty_any"):
         st.warning("Unsaved pairings detected in Schedule. Save or clear them before leaving.")
     sec = st.selectbox("Section", options=sections or DEFAULT_SECTIONS, key="tl_sec")

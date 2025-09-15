@@ -1,5 +1,5 @@
 # storage.py
-import json, os, time
+import json, os, time, hashlib
 from typing import Dict, Any
 
 DEFAULT_STATE = {
@@ -43,6 +43,14 @@ class Store:
     def save(self):
         with open(self.path, "w", encoding="utf-8") as f:
             json.dump(self.state, f, ensure_ascii=False, indent=2)
+        # Update saved markers for local mode
+        try:
+            import streamlit as st  # type: ignore
+            snap = json.dumps(self.state, sort_keys=True, ensure_ascii=False)
+            st.session_state["last_saved_hash"] = hashlib.sha1(snap.encode("utf-8")).hexdigest()
+            st.session_state["last_saved_ts"] = time.time()
+        except Exception:
+            pass
 
     def log(self, action: str, payload: Any):
         self.state["audit"].append({"ts": time.time(), "action": action, "payload": payload})
