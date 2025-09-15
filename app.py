@@ -9,6 +9,7 @@ from engine import (
     strong_vs_strong_pairs, assign_rinks_with_preferences, last_rink_map, sort_standings
 )
 from config import EVENT_NAME, DEFAULT_RINKS, DEFAULT_ROUNDS, DEFAULT_SECTIONS
+import os
 import auth_supabase as auth
 import csv, io, datetime as dt, random, re
 import pandas as pd
@@ -264,6 +265,16 @@ ENTER_SCORES_CSS_COMPACT = """
 st.markdown(ENTER_SCORES_CSS_COMPACT, unsafe_allow_html=True)
 # ---- Authentication (Supabase) & per-user data path ----
 SUPABASE_CONFIGURED = auth.get_client() is not None
+REQUIRE_AUTH = True
+try:
+    # Allow override via secrets or env for local development
+    REQUIRE_AUTH = bool(int(os.getenv("REQUIRE_AUTH", "1")))
+    if "auth" in st.secrets:
+        require_val = st.secrets["auth"].get("require")
+        if require_val is not None:
+            REQUIRE_AUTH = bool(require_val)
+except Exception:
+    pass
 
 def _render_auth_gate():
     """Render login/register UI if Supabase is configured.
@@ -272,7 +283,11 @@ def _render_auth_gate():
     when authenticated. Stops the app flow until the user signs in.
     """
     if not SUPABASE_CONFIGURED:
-        # No auth configured; proceed as guest (single shared local state)
+        # If auth is required but client is missing, block access with guidance
+        if REQUIRE_AUTH:
+            st.error("Authentication required but Supabase is not configured. Add secrets or env keys.")
+            st.stop()
+        # Otherwise allow guest mode
         return
 
     # Already signed in
@@ -280,7 +295,7 @@ def _render_auth_gate():
         return
 
     st.markdown("## Sign in to continue")
-    tabs = st.tabs(["Sign In", "Sign Up", "Magic Code"])
+    tabs = st.tabs(["Sign In", "Sign Up"])
 
     with tabs[0]:
         with st.form("login_form", clear_on_submit=False):
@@ -308,29 +323,7 @@ def _render_auth_gate():
             except Exception as e:
                 st.error(f"Sign up failed: {e}")
 
-    with tabs[2]:
-        with st.form("otp_form", clear_on_submit=False):
-            email3 = st.text_input("Email for code", key="auth_email3")
-            request = st.form_submit_button("Send code")
-        if request:
-            try:
-                auth.send_otp(email3.strip())
-                st.success("Code sent. Check your mailbox.")
-            except Exception as e:
-                st.error(f"Could not send code: {e}")
-        with st.form("otp_verify_form", clear_on_submit=False):
-            email4 = st.text_input("Email", key="auth_email4")
-            code = st.text_input("Code", key="auth_code")
-            verify = st.form_submit_button("Verify & Sign In")
-        if verify:
-            try:
-                sess = auth.verify_otp(email4.strip(), code.strip())
-                st.session_state["auth_user"] = {"id": sess.user.get("id"), "email": sess.user.get("email")}
-                st.success("Signed in")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Verification failed: {e}")
-
+    # Always stop until user signs in
     st.stop()
 
 
@@ -344,6 +337,21 @@ if SUPABASE_CONFIGURED and _user and _user.get("id"):
 else:
     DATA_PATH = "data/event.json"
     store = Store(DATA_PATH)
+
+# Optional auth diagnostics (only when debug=1 in URL)
+try:
+    qp = dict(st.query_params)  # 1.36+
+except Exception:
+    try:
+        qp = st.experimental_get_query_params()
+    except Exception:
+        qp = {}
+want_debug = str(qp.get("debug", "0")).lower() in ("1","true","yes")
+if want_debug:
+    diag = auth.diagnose_config()
+    with st.sidebar:
+        st.caption("Auth diagnostics (safe):")
+        st.write({k: v for k, v in diag.items()})
 
 # ---- Styles for Schedule tab ----
 SECTION_COLORS = {
