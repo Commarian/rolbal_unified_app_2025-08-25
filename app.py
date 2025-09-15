@@ -20,6 +20,28 @@ except ImportError:
     st.stop()
 
 st.set_page_config(page_title="Rolbal Unified", layout="wide")
+
+# Capture Supabase recovery hash (#access_token=...&type=recovery) into query string
+components.html(
+    """
+    <script>
+    (function(){
+      try {
+        var h = window.location.hash;
+        var s = window.location.search;
+        if (h && h.indexOf('type=recovery') !== -1 && (!s || s.indexOf('type=recovery') === -1)){
+          var hp = new URLSearchParams(h.substring(1));
+          var sp = new URLSearchParams(window.location.search);
+          ['access_token','refresh_token','type'].forEach(function(k){ var v = hp.get(k); if(v){ sp.set(k,v);} });
+          var url = window.location.pathname + '?' + sp.toString();
+          window.location.replace(url);
+        }
+      } catch(e) {}
+    })();
+    </script>
+    """,
+    height=0,
+)
 def render_rink_score(section: str, round_no: int, rink: int, pr: dict, store, mirror_on: bool):
     """Compact row renderer for a single rink."""
     a_id = pr.get("a_id"); b_id = pr.get("b_id")
@@ -294,6 +316,37 @@ def _render_auth_gate():
     if st.session_state.get("auth_user"):
         return
 
+    # Password recovery flow
+    try:
+        q = dict(st.query_params)
+    except Exception:
+        try:
+            q = st.experimental_get_query_params()
+        except Exception:
+            q = {}
+    if str(q.get("type", "")) == "recovery" and q.get("access_token"):
+        st.markdown("## Reset your password")
+        with st.form("pw_reset_form", clear_on_submit=False):
+            npw = st.text_input("New password", type="password", key="pw_new")
+            npw2 = st.text_input("Confirm password", type="password", key="pw_new2")
+            submit_pw = st.form_submit_button("Update password")
+        if submit_pw:
+            if not npw or npw != npw2:
+                st.error("Passwords do not match or empty")
+            else:
+                try:
+                    sess = auth.apply_recovery(str(q.get("access_token")), str(q.get("refresh_token", "")), npw)
+                    st.session_state["auth_user"] = {"id": sess.user.get("id"), "email": sess.user.get("email")}
+                    try:
+                        st.experimental_set_query_params()  # clear tokens from URL
+                    except Exception:
+                        pass
+                    st.success("Password updated. Signed in.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Could not update password: {e}")
+        st.stop()
+
     st.markdown("## Sign in to continue")
     tabs = st.tabs(["Sign In", "Sign Up"])
 
@@ -310,6 +363,16 @@ def _render_auth_gate():
                 st.rerun()
             except Exception as e:
                 st.error(f"Login failed: {e}")
+        # Forgot password
+        if st.button("Forgot password? Email reset link", key="pw_forgot"):
+            if not email:
+                st.error("Enter your email above first")
+            else:
+                try:
+                    auth.send_password_reset(email.strip())
+                    st.success("Password reset email sent. Check your inbox.")
+                except Exception as e:
+                    st.error(f"Could not send reset email: {e}")
 
     with tabs[1]:
         with st.form("signup_form", clear_on_submit=False):

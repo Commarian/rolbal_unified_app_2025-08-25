@@ -178,3 +178,49 @@ def _to_dict(obj: Any) -> Dict[str, Any]:
         pass
     # Fallback best-effort
     return dict(obj or {})
+
+
+def send_password_reset(email: str) -> None:
+    """Send a password reset email with redirect back to the app."""
+    sb = get_client()
+    if sb is None:
+        raise RuntimeError("Supabase is not configured or client unavailable")
+    redirect_to = _redirect_url_default()
+    # Try multiple client method signatures for compatibility
+    last_err = None
+    for call in (
+        lambda: getattr(sb.auth, "reset_password_for_email")(email, options={"email_redirect_to": redirect_to} if redirect_to else None),
+        lambda: getattr(sb.auth, "reset_password_for_email")({"email": email, "options": {"email_redirect_to": redirect_to} if redirect_to else {}}),
+        lambda: getattr(sb.auth, "reset_password_email")(email, options={"redirect_to": redirect_to} if redirect_to else None),
+    ):
+        try:
+            call()
+            return
+        except Exception as e:  # pragma: no cover - best-effort fallbacks
+            last_err = e
+            continue
+    if last_err:
+        raise last_err
+
+
+def apply_recovery(access_token: str, refresh_token: str, new_password: str) -> AuthSession:
+    """Apply recovery tokens and update user password, returning a session."""
+    sb = get_client()
+    if sb is None:
+        raise RuntimeError("Supabase is not configured or client unavailable")
+    # Establish the recovery session
+    try:
+        sb.auth.set_session(access_token, refresh_token)
+    except Exception:
+        pass
+    res = sb.auth.update_user({"password": new_password})
+    user = getattr(res, "user", None) or getattr(res, "user", {})
+    # Try to get active session again
+    session = None
+    try:
+        session = sb.auth.get_session()
+    except Exception:
+        session = None
+    acc = getattr(session, "access_token", access_token) if session else access_token
+    ref = getattr(session, "refresh_token", refresh_token) if session else refresh_token
+    return AuthSession(user=_to_dict(user), access_token=acc, refresh_token=ref)
