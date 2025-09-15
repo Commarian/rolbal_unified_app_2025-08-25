@@ -8,6 +8,7 @@ from engine import (
     strong_vs_strong_pairs, assign_rinks_with_preferences, last_rink_map, sort_standings
 )
 from config import EVENT_NAME, DEFAULT_RINKS, DEFAULT_ROUNDS, DEFAULT_SECTIONS
+import auth_supabase as auth
 import csv, io, datetime as dt, random, re
 import pandas as pd
 try:
@@ -260,7 +261,86 @@ ENTER_SCORES_CSS_COMPACT = """
 </style>
 """
 st.markdown(ENTER_SCORES_CSS_COMPACT, unsafe_allow_html=True)
-DATA_PATH = "data/event.json"
+# ---- Authentication (Supabase) & per-user data path ----
+SUPABASE_CONFIGURED = auth.get_client() is not None
+
+def _render_auth_gate():
+    """Render login/register UI if Supabase is configured.
+
+    Sets st.session_state["auth_user"] to a dict with at least {"id","email"}
+    when authenticated. Stops the app flow until the user signs in.
+    """
+    if not SUPABASE_CONFIGURED:
+        # No auth configured; proceed as guest (single shared local state)
+        return
+
+    # Already signed in
+    if st.session_state.get("auth_user"):
+        return
+
+    st.markdown("## Sign in to continue")
+    tabs = st.tabs(["Sign In", "Sign Up", "Magic Code"])
+
+    with tabs[0]:
+        with st.form("login_form", clear_on_submit=False):
+            email = st.text_input("Email", key="auth_email")
+            password = st.text_input("Password", type="password", key="auth_password")
+            submitted = st.form_submit_button("Sign In")
+        if submitted:
+            try:
+                sess = auth.sign_in(email.strip(), password)
+                st.session_state["auth_user"] = {"id": sess.user.get("id"), "email": sess.user.get("email")}
+                st.success("Signed in")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Login failed: {e}")
+
+    with tabs[1]:
+        with st.form("signup_form", clear_on_submit=False):
+            email2 = st.text_input("Email", key="auth_email2")
+            pw2 = st.text_input("Password", type="password", key="auth_password2")
+            submitted2 = st.form_submit_button("Create Account")
+        if submitted2:
+            try:
+                sess = auth.sign_up(email2.strip(), pw2)
+                st.info("Check your email to confirm your account if required. Then sign in.")
+            except Exception as e:
+                st.error(f"Sign up failed: {e}")
+
+    with tabs[2]:
+        with st.form("otp_form", clear_on_submit=False):
+            email3 = st.text_input("Email for code", key="auth_email3")
+            request = st.form_submit_button("Send code")
+        if request:
+            try:
+                auth.send_otp(email3.strip())
+                st.success("Code sent. Check your mailbox.")
+            except Exception as e:
+                st.error(f"Could not send code: {e}")
+        with st.form("otp_verify_form", clear_on_submit=False):
+            email4 = st.text_input("Email", key="auth_email4")
+            code = st.text_input("Code", key="auth_code")
+            verify = st.form_submit_button("Verify & Sign In")
+        if verify:
+            try:
+                sess = auth.verify_otp(email4.strip(), code.strip())
+                st.session_state["auth_user"] = {"id": sess.user.get("id"), "email": sess.user.get("email")}
+                st.success("Signed in")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Verification failed: {e}")
+
+    st.stop()
+
+
+_render_auth_gate()
+
+# Compute data path per user to avoid clashes when auth is enabled
+_user = st.session_state.get("auth_user") if SUPABASE_CONFIGURED else None
+if SUPABASE_CONFIGURED and _user and _user.get("id"):
+    DATA_PATH = f"data/event_{_user['id']}.json"
+else:
+    DATA_PATH = "data/event.json"
 store = Store(DATA_PATH)
 
 # ---- Styles for Schedule tab ----
@@ -298,6 +378,20 @@ PLAYERS_CSS = """
 st.markdown(PLAYERS_CSS, unsafe_allow_html=True)
 
 # -------- Sidebar Global Settings --------
+if SUPABASE_CONFIGURED:
+    if _user:
+        with st.sidebar:
+            st.caption(f"Signed in as {_user.get('email')}")
+            if st.button("Sign out", key="sb_signout"):
+                try:
+                    auth.sign_out()
+                except Exception:
+                    pass
+                st.session_state.pop("auth_user", None)
+                st.rerun()
+    else:
+        with st.sidebar:
+            st.info("Guest mode (auth not active)")
 st.sidebar.title("⚙️ Event Settings")
 event_name = st.sidebar.text_input("Event name", store.state.get("event_name", EVENT_NAME), key="sb_event")
 rinks = st.sidebar.number_input("Rinks", 1, 20, int(store.state.get("rinks", DEFAULT_RINKS)), 1, key="sb_rinks")

@@ -1,0 +1,127 @@
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+from typing import Optional, Dict, Any
+
+import streamlit as st
+
+try:
+    from supabase import create_client, Client  # type: ignore
+except Exception:
+    create_client = None  # type: ignore
+    Client = None  # type: ignore
+
+
+@dataclass
+class AuthSession:
+    user: Dict[str, Any]
+    access_token: str
+    refresh_token: Optional[str]
+
+
+def _get_supabase_keys() -> Optional[tuple[str, str]]:
+    """Read Supabase URL and Anon key from Streamlit secrets or env vars."""
+    url = None
+    key = None
+    if "supabase" in st.secrets:
+        url = st.secrets["supabase"].get("url")
+        key = st.secrets["supabase"].get("anon_key")
+    url = url or os.getenv("SUPABASE_URL")
+    key = key or os.getenv("SUPABASE_ANON_KEY")
+    if url and key:
+        return url, key
+    return None
+
+
+def get_client() -> Optional["Client"]:
+    """Return a Supabase client if configured, else None."""
+    if create_client is None:
+        return None
+    keys = _get_supabase_keys()
+    if not keys:
+        return None
+    url, key = keys
+    try:
+        return create_client(url, key)
+    except Exception:
+        return None
+
+
+def sign_up(email: str, password: str) -> AuthSession:
+    sb = get_client()
+    if sb is None:
+        raise RuntimeError("Supabase is not configured or client unavailable")
+    res = sb.auth.sign_up({"email": email, "password": password})
+    # Some providers require email confirmation; session may be None initially
+    user = getattr(res, "user", None) or getattr(res, "user", {})
+    session = getattr(res, "session", None)
+    access = getattr(session, "access_token", None) if session else None
+    refresh = getattr(session, "refresh_token", None) if session else None
+    return AuthSession(user=_to_dict(user), access_token=access, refresh_token=refresh)
+
+
+def sign_in(email: str, password: str) -> AuthSession:
+    sb = get_client()
+    if sb is None:
+        raise RuntimeError("Supabase is not configured or client unavailable")
+    res = sb.auth.sign_in_with_password({"email": email, "password": password})
+    session = getattr(res, "session", None)
+    user = getattr(res, "user", None)
+    if not session or not user:
+        raise RuntimeError("Invalid login: no session returned")
+    # Persist session to client for future get_user calls
+    try:
+        sb.auth.set_session(session.access_token, session.refresh_token)  # type: ignore[attr-defined]
+    except Exception:
+        pass
+    return AuthSession(user=_to_dict(user), access_token=session.access_token, refresh_token=session.refresh_token)
+
+
+def sign_out() -> None:
+    sb = get_client()
+    if sb is None:
+        return
+    try:
+        sb.auth.sign_out()
+    except Exception:
+        pass
+
+
+def send_otp(email: str) -> None:
+    sb = get_client()
+    if sb is None:
+        raise RuntimeError("Supabase is not configured or client unavailable")
+    # Sends a magic link or code depending on project settings
+    sb.auth.sign_in_with_otp({"email": email})
+
+
+def verify_otp(email: str, code: str) -> AuthSession:
+    sb = get_client()
+    if sb is None:
+        raise RuntimeError("Supabase is not configured or client unavailable")
+    res = sb.auth.verify_otp({"email": email, "token": code, "type": "email"})
+    session = getattr(res, "session", None)
+    user = getattr(res, "user", None)
+    if not session or not user:
+        raise RuntimeError("Invalid code or expired OTP")
+    try:
+        sb.auth.set_session(session.access_token, session.refresh_token)  # type: ignore[attr-defined]
+    except Exception:
+        pass
+    return AuthSession(user=_to_dict(user), access_token=session.access_token, refresh_token=session.refresh_token)
+
+
+def _to_dict(obj: Any) -> Dict[str, Any]:
+    """Convert a Supabase user object to a plain dict."""
+    try:
+        # Attempt dataclass-like conversion
+        if hasattr(obj, "model_dump"):
+            return obj.model_dump()
+        if hasattr(obj, "__dict__"):
+            return dict(obj.__dict__)
+    except Exception:
+        pass
+    # Fallback best-effort
+    return dict(obj or {})
+
