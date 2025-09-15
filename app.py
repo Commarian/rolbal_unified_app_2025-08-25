@@ -286,6 +286,15 @@ ENTER_SCORES_CSS_COMPACT = """
 </style>
 """
 st.markdown(ENTER_SCORES_CSS_COMPACT, unsafe_allow_html=True)
+SELECTS_SIMPLE_CSS = """
+<style>
+/* Make selectboxes act like simple dropdowns (no typing) */
+.stSelectbox [data-baseweb="select"] input { pointer-events: none !important; caret-color: transparent !important; }
+.stSelectbox [data-baseweb="select"] { cursor: pointer; }
+.stSelectbox [data-baseweb="select"] > div { box-shadow: none !important; }
+</style>
+"""
+st.markdown(SELECTS_SIMPLE_CSS, unsafe_allow_html=True)
 # ---- Authentication (Supabase) & per-user data path ----
 SUPABASE_CONFIGURED = auth.get_client() is not None
 REQUIRE_AUTH = True
@@ -660,6 +669,8 @@ STATUS_CSS = """
 .ok { color:#22c55e; border-color: rgba(34,197,94,.35); }
 .warn { color:#f59e0b; border-color: rgba(245,158,11,.35); }
 .err { color:#ef4444; border-color: rgba(239,68,68,.35); }
+.hdrsave .stButton>button { padding:4px 12px; border-radius:999px; font-weight:700; font-size:12px; border:1px solid rgba(239,68,68,.35); color:#ef4444; background:rgba(239,68,68,.12); }
+.hdrsave .stButton>button:hover { background:rgba(239,68,68,.18); }
 </style>
 """
 st.markdown(STATUS_CSS, unsafe_allow_html=True)
@@ -690,7 +701,26 @@ hdr_l, hdr_r = st.columns([0.75, 0.25])
 with hdr_l:
     st.title(f"{event_name} · Unified App")
 with hdr_r:
-    _render_saved_status()
+    # If unsaved, render a button to save immediately
+    try:
+        snap = json.dumps(store.state, sort_keys=True, ensure_ascii=False)
+        cur_h = hashlib.sha1(snap.encode("utf-8")).hexdigest()
+    except Exception:
+        cur_h = None
+    last_h = st.session_state.get("last_saved_hash")
+    unsaved = not (cur_h is not None and last_h == cur_h) or bool(st.session_state.get("pairings_dirty_any"))
+    if unsaved:
+        st.markdown("<div class='hdrsave'>", unsafe_allow_html=True)
+        if st.button("Unsaved — Save now", key="hdr_save_now"):
+            try:
+                store.save()
+                st.toast("Saved", icon="✅")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Save failed: {e}")
+        st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        _render_saved_status()
 
 tab_rules, tab_players, tab_schedule, tab_scores, tab_perend, tab_standings, tab_lb, tab_io, tab_tools = st.tabs([
     "Rules", "Players", "Schedule", "Enter Scores", "Per-end", "Standings", "Leaderboard", "Import/Export", "Tools"
