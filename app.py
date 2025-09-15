@@ -404,58 +404,126 @@ if SUPABASE_CONFIGURED and _user and _user.get("id"):
         # Resolve current selection
         if "current_event_id" not in st.session_state:
             st.session_state["current_event_id"] = (events[0]["event_id"] if events else None)
-        names = [(e.get("event_id"), e.get("name") or "Event") for e in events]
-        # Build label map and options
-        labels = {eid or "default": name for eid, name in names}
-        opts = [eid or "default" for eid, _ in names]
-        if not opts:
-            opts = ["default"]
-            labels["default"] = "Default Event"
-        sel_key = st.selectbox("Select event", options=opts, format_func=lambda k: labels.get(k, str(k)), index=max(0, opts.index(st.session_state.get("current_event_id") or "default")) if opts else 0, key="sb_event_select")
-        _event_id = None if sel_key == "default" else sel_key
 
-        c1, c2 = st.columns([1,1])
-        with c1:
-            new_name = st.text_input("New name", key="sb_ev_newname")
-            if st.button("Create", key="sb_ev_create") and new_name.strip():
+        # Build radio list with clean labels (no input field)
+        label_to_id = {}
+        labels = []
+        for e in events:
+            eid = e.get("event_id") or None
+            nm = (e.get("name") or "Event").strip() or "Event"
+            label = nm if eid else "Default Event"
+            # ensure uniqueness if duplicate names
+            base = label; k = 2
+            while label in label_to_id:
+                label = f"{base} ({k})"; k += 1
+            label_to_id[label] = eid
+            labels.append(label)
+        if not labels:
+            label_to_id = {"Default Event": None}
+            labels = ["Default Event"]
+
+        # Determine current label from stored event_id
+        current_id = st.session_state.get("current_event_id")
+        try:
+            cur_label = next(l for l, v in label_to_id.items() if v == current_id)
+        except StopIteration:
+            cur_label = labels[0]
+        idx = max(0, labels.index(cur_label)) if labels else 0
+
+        sel_label = st.radio("Select event", options=labels, index=idx, key="sb_event_select")
+        _event_id = label_to_id.get(sel_label)
+        if _event_id != current_id:
+            st.session_state["current_event_id"] = _event_id
+            st.rerun()
+
+        # Actions as toggled forms to avoid sticky inputs
+        c1, c2, c3, c4 = st.columns(4)
+        if c1.button("New", key="ev_new_btn"):
+            st.session_state["ev_show_create"] = True
+        if c2.button("Rename", key="ev_rename_btn", disabled=_event_id is None):
+            st.session_state["ev_show_rename"] = True
+        if c3.button("Duplicate", key="ev_dup_btn"):
+            st.session_state["ev_show_dup"] = True
+        if c4.button("Delete", key="ev_del_btn", disabled=_event_id is None):
+            st.session_state["ev_show_del"] = True
+
+        # Create form
+        if st.session_state.get("ev_show_create"):
+            with st.form("ev_create_form", clear_on_submit=False):
+                nm = st.text_input("Event name", key="ev_create_name")
+                cc1, cc2 = st.columns([1,1])
+                create_ok = cc1.form_submit_button("Create")
+                cancel = cc2.form_submit_button("Cancel")
+            if cancel:
+                st.session_state["ev_show_create"] = False
+                st.rerun()
+            if create_ok and nm.strip():
                 try:
-                    new_id = SupabaseStore.create_event(_user["id"], new_name.strip())
+                    new_id = SupabaseStore.create_event(_user["id"], nm.strip())
+                    st.session_state["ev_show_create"] = False
                     st.session_state["current_event_id"] = new_id
                     st.success("Event created")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Could not create: {e}")
-        with c2:
-            rename = st.text_input("Rename", key="sb_ev_rename")
-            if st.button("Apply rename", key="sb_ev_rename_btn") and rename.strip() and _event_id:
+
+        # Rename form
+        if st.session_state.get("ev_show_rename") and _event_id:
+            with st.form("ev_rename_form", clear_on_submit=False):
+                nm = st.text_input("New name", key="ev_rename_name")
+                rc1, rc2 = st.columns([1,1])
+                apply = rc1.form_submit_button("Apply rename")
+                cancel = rc2.form_submit_button("Cancel")
+            if cancel:
+                st.session_state["ev_show_rename"] = False
+                st.rerun()
+            if apply and nm.strip():
                 try:
-                    SupabaseStore.rename_event(_user["id"], _event_id, rename.strip())
+                    SupabaseStore.rename_event(_user["id"], _event_id, nm.strip())
+                    st.session_state["ev_show_rename"] = False
                     st.success("Renamed")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Could not rename: {e}")
 
-        c3, c4 = st.columns([1,1])
-        with c3:
-            dup_name = st.text_input("Duplicate as", key="sb_ev_dupname")
-            if st.button("Duplicate", key="sb_ev_dup") and dup_name.strip():
+        # Duplicate form
+        if st.session_state.get("ev_show_dup"):
+            with st.form("ev_dup_form", clear_on_submit=False):
+                nm = st.text_input("Duplicate as", key="ev_dup_name")
+                dc1, dc2 = st.columns([1,1])
+                do_dup = dc1.form_submit_button("Duplicate")
+                cancel = dc2.form_submit_button("Cancel")
+            if cancel:
+                st.session_state["ev_show_dup"] = False
+                st.rerun()
+            if do_dup and nm.strip():
                 try:
-                    src = _event_id  # may be None (legacy)
-                    new_id = SupabaseStore.duplicate_event(_user["id"], src, dup_name.strip())
+                    src = _event_id
+                    new_id = SupabaseStore.duplicate_event(_user["id"], src, nm.strip())
+                    st.session_state["ev_show_dup"] = False
                     st.session_state["current_event_id"] = new_id
                     st.success("Duplicated")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Could not duplicate: {e}")
-        with c4:
-            if st.button("Delete", key="sb_ev_del", type="secondary") and _event_id:
+
+        # Delete confirm
+        if st.session_state.get("ev_show_del") and _event_id:
+            with st.form("ev_del_form", clear_on_submit=False):
+                st.warning("This will permanently delete the selected event.")
+                confirm = st.text_input("Type DELETE to confirm", key="ev_del_confirm")
+                del_ok = st.form_submit_button("Delete permanently")
+            if del_ok and confirm == "DELETE":
                 try:
                     SupabaseStore.delete_event(_user["id"], _event_id)
+                    st.session_state["ev_show_del"] = False
                     st.session_state["current_event_id"] = None
                     st.success("Deleted")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Could not delete: {e}")
+            elif del_ok:
+                st.error("Confirmation text mismatch.")
 
         st.markdown("---")
         auto = st.checkbox("Auto-refresh every 5s", value=False, key="sb_auto")
