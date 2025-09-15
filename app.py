@@ -2,6 +2,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 from storage import Store
+from storage_supabase import SupabaseStore
 from engine import (
     PlayerStanding, compute_standings, round_result,
     round_robin_pairs, build_history,
@@ -338,10 +339,11 @@ _render_auth_gate()
 # Compute data path per user to avoid clashes when auth is enabled
 _user = st.session_state.get("auth_user") if SUPABASE_CONFIGURED else None
 if SUPABASE_CONFIGURED and _user and _user.get("id"):
-    DATA_PATH = f"data/event_{_user['id']}.json"
+    # Use online storage (Supabase DB). Local path unused.
+    store = SupabaseStore(_user["id"])
 else:
     DATA_PATH = "data/event.json"
-store = Store(DATA_PATH)
+    store = Store(DATA_PATH)
 
 # ---- Styles for Schedule tab ----
 SECTION_COLORS = {
